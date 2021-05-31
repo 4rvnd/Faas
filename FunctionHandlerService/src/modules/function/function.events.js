@@ -23,187 +23,88 @@ Consumer.on('kafkaMessage', async (data) => {
     }
 });
 
-async function create(message) {
-    let event = 'create';
-    try {
-        if (message.value) {
-            message = JSON.parse(message.value.toString());
-            let decoded = auth.decode(message.auth);
-            message.userId = decoded;
-            let req = {
-                body: message
-            }
-            let res = await handler.create(req);
-            res.data.requestId = message.requestId;
-            console.log(res); // 
-            //Produce back to kafka
-            await Producer.send({
-                topic: `${config.service.name}_${event}_res`,
-                messages: [
-                    { key: 'data', value: JSON.stringify(res.data) }
-                ],
-            })
+
+async function produce(message, event) {
+    if (message.value) {
+        message = JSON.parse(message.value.toString());
+        let decoded = auth.decode(message.auth);
+        message.userId = decoded;
+        let req = {
+            body: message
         }
-        return 1;
-    }
-    catch (err) {
-        console.log(err);
-        let res = {
-            status: false
-        }
+        let res = await `handler.${event}(req)`;
+        res.data.requestId = message.requestId;
+        console.log(res); // 
+        //Produce back to kafka
         await Producer.send({
             topic: `${config.service.name}_${event}_res`,
             messages: [
-                { key: 'data', value: JSON.stringify(res) }
+                { key: 'data', value: JSON.stringify(res.data) }
             ],
         })
+    }
+    return 1;
+}
+
+
+async function errr(err, event) {
+    console.log(err);
+    let res = {
+        status: false
+    }
+    await Producer.send({
+        topic: `${config.service.name}_${event}_res`,
+        messages: [
+            { key: 'data', value: JSON.stringify(res) }
+        ],
+    })
+}
+async function create(message) {
+    let event = 'create';
+    try {
+        produce(message, event);
+    }
+    catch (err) {
+        errr(err, event);
     }
 }
 
 async function read(message) {
     let event = 'read';
     try {
-        if (message.value) {
-            message = JSON.parse(message.value.toString());
-            let decoded = auth.decode(message.auth);
-            message.userId = decoded;
-            let req = {
-                body: message
-            }
-            let res = await handler.read(req);
-            res.data.requestId = message.requestId;
-            console.log(res); // 
-            //Produce back to kafka
-            await Producer.send({
-                topic: `${config.service.name}_${event}_res`,
-                messages: [
-                    { key: 'data', value: JSON.stringify(res.data) }
-                ],
-            })
-        }
-        return 1;
+        produce(message, event);
     }
     catch (err) {
-        console.log(err);
-        let res = {
-            status: false
-        }
-        await Producer.send({
-            topic: `${config.service.name}_${event}_res`,
-            messages: [
-                { key: 'data', value: JSON.stringify(res) }
-            ],
-        })
+        errr(err, event);
     }
 }
 
 async function executeRead(message) {
     let event = 'execute';
     try {
-        if (message.value) {
-            message = JSON.parse(message.value.toString());
-            let decoded = auth.decode(message.auth);
-            message.userId = decoded;
-            let req = {
-                body: message
-            }
-            let res = await handler.executeRead(req);
-            res.data.requestId = message.requestId;
-            console.log(res.data, res.data.data); // 
-            //Produce back to kafka
-            await Producer.send({
-                topic: `computeengine_execute_req`,
-                messages: [
-                    { key:  message.requestId, value: res.data.data.code }
-                ],
-            })
-        }
-        return 1;
+        produce(message, event);
     }
     catch (err) {
-        console.log(err);
-        let res = {
-            status: false
-        }
-        await Producer.send({
-            topic: `computeengine_execute_res`,
-            messages: [
-                { key: 'data', value: JSON.stringify(res) }
-            ],
-        })
+        errr(err, event);
     }
 }
 
 async function remove(message) {
     let event = 'delete';
     try {
-        if (message.value) {
-            message = JSON.parse(message.value.toString());
-            let decoded = auth.decode(message.auth);
-            message.userId = decoded;
-            let req = {
-                body: message
-            }
-            let res = await handler.remove(req);
-            res.data.requestId = message.requestId;
-            console.log(res); // 
-            //Produce back to kafka
-            await Producer.send({
-                topic: `${config.service.name}_${event}_res`,
-                messages: [
-                    { key: 'data', value: JSON.stringify(res.data) }
-                ],
-            })
-        }
-        return 1;
+        produce(message, event);
     }
     catch (err) {
-        console.log(err);
-        let res = {
-            status: false
-        }
-        await Producer.send({
-            topic: `${config.service.name}_${event}_res`,
-            messages: [
-                { key: 'data', value: JSON.stringify(res) }
-            ],
-        })
+        errr(err, event);
     }
 }
 
 async function update(message) {
     let event = 'update';
     try {
-        if (message.value) {
-            message = JSON.parse(message.value.toString());
-            let decoded = auth.decode(message.auth);
-            message.userId = decoded;
-            let req = {
-                body: message,
-            }
-            let res = await handler.update(req);
-            res.data.requestId = message.requestId;
-            console.log(res); // { code: 200, data: { status: true } }
-            //Produce back to kafka
-            await Producer.send({
-                topic: `${config.service.name}_${event}_res`,
-                messages: [
-                    { key: 'data', value: JSON.stringify(res.data) }
-                ],
-            })
-        }
-        return 1;
+        produce(message, event);
     }
     catch (err) {
-        console.log(err);
-        let res = {
-            status: false
-        }
-        await Producer.send({
-            topic: `${config.service.name}_${event}_res`,
-            messages: [
-                { key: 'data', value: JSON.stringify(res) }
-            ],
-        })
+        errr(err, event);
     }
 }
